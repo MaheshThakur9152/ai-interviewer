@@ -12,9 +12,7 @@ const Hero: React.FC<HeroProps> = ({ onJoin }) => {
   const [sectionOpacity, setSectionOpacity] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
   const sectionRef = useRef<HTMLElement>(null);
-  
-  const [activeVideo, setActiveVideo] = useState<'A' | 'B'>('A');
-  const videoUrl = "https://assets.mixkit.co/videos/preview/mixkit-clouds-and-blue-sky-background-27471-large.mp4";
+  const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -27,6 +25,13 @@ const Hero: React.FC<HeroProps> = ({ onJoin }) => {
     return () => observer.disconnect();
   }, []);
 
+  useEffect(() => {
+    const video = videoRef.current;
+    if (video) {
+      video.play().catch(err => console.warn('Video autoplay failed:', err));
+    }
+  }, []);
+
   const handleMouseMove = (e: React.MouseEvent) => {
     if (!containerRef.current) return;
     const { left, top, width, height } = containerRef.current.getBoundingClientRect();
@@ -37,8 +42,24 @@ const Hero: React.FC<HeroProps> = ({ onJoin }) => {
 
   return (
     <section ref={sectionRef} className="relative pt-40 pb-32 overflow-hidden perspective-2000">
-      {/* Background Gradients */}
-      <div className="absolute inset-0 z-0 pointer-events-none" style={{ backgroundImage: 'url(/clideo_editor_6241c33ddc0f4805bfc82ef274c99941.gif)', backgroundSize: 'cover', backgroundPosition: 'center' }}>
+      {/* Background Video */}
+      <div className="absolute inset-0 z-0 pointer-events-none">
+        <video
+          ref={videoRef}
+          autoPlay
+          muted
+          loop
+          playsInline
+          preload="auto"
+          poster="https://res.cloudinary.com/di9eeahdy/video/upload/so_0,f_jpg,q_auto/v1766722699/output_yacgth.jpg"
+          className="w-full h-full object-cover animate-in fade-in duration-1000"
+        >
+          <source src="https://res.cloudinary.com/di9eeahdy/video/upload/f_auto,q_auto/v1766722699/output_yacgth.webm" type="video/webm" />
+          <source src="https://res.cloudinary.com/di9eeahdy/video/upload/f_auto,q_auto/v1766722699/output_yacgth.mp4" type="video/mp4" />
+          Your browser does not support the video tag.
+        </video>
+        {/* Optional cinematic overlay */}
+        <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-transparent to-black/20 backdrop-blur-[0.5px]" />
         <div className="absolute top-1/4 left-1/4 w-[500px] h-[500px] bg-purple-600/10 blur-[150px] rounded-full" />
         <div className="absolute bottom-1/4 right-1/4 w-[500px] h-[500px] bg-blue-600/10 blur-[150px] rounded-full" />
       </div>
