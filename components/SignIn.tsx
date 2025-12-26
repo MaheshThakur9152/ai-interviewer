@@ -4,6 +4,7 @@ import { useGoogleLogin } from '@react-oauth/google';
 import jwt_decode from 'jwt-decode';
 import { Shield, Lock, Fingerprint, Mail, Cpu, Orbit, ChevronLeft, X } from 'lucide-react';
 import Logo from './Logo';
+import BackgroundVideo from './BackgroundVideo';
 
 interface SignInProps {
   onBack: () => void;
@@ -58,6 +59,13 @@ const SignIn: React.FC<SignInProps> = ({ onBack, onComplete }) => {
 
   return (
     <div className="fixed inset-0 z-[100] bg-[#020202] flex items-center justify-center overflow-hidden scanlines">
+      {/* Background Video */}
+      <div className="absolute inset-0 z-0">
+        <BackgroundVideo />
+        {/* Modal Overlay: Blur and Darkening */}
+        <div className="absolute inset-0 bg-black/40 backdrop-blur-md" />
+      </div>
+
       {/* Fixed UI - Close Button */}
       <div className="absolute top-8 right-8 z-[110]">
         <button 
@@ -69,14 +77,7 @@ const SignIn: React.FC<SignInProps> = ({ onBack, onComplete }) => {
         </button>
       </div>
 
-      {/* Immersive Background Elements */}
-      <div className="absolute inset-0 z-0" style={{ backgroundImage: 'url(/clideo_editor_6241c33ddc0f4805bfc82ef274c99941.gif)', backgroundSize: 'cover', backgroundPosition: 'center' }}>
-         <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_center,rgba(139,92,246,0.05)_0%,transparent_70%)]" />
-         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[1200px] h-[1px] bg-white/5 rotate-45" />
-         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[1200px] h-[1px] bg-white/5 -rotate-45" />
-      </div>
-
-      <div className="relative z-10 w-full max-w-lg px-6">
+      <div className="relative z-10 w-full max-w-lg px-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
         {/* Floating Contextual Back Button */}
         <div className="absolute -top-16 left-0 right-0 flex justify-center">
           <button 
@@ -89,12 +90,12 @@ const SignIn: React.FC<SignInProps> = ({ onBack, onComplete }) => {
         </div>
 
         {/* The Login Pod */}
-        <div className="relative group">
+        <div className="relative group grain-overlay">
           {/* Back Glow Layer */}
           <div className="absolute -inset-10 bg-purple-600/10 blur-[80px] rounded-full pointer-events-none opacity-50 group-hover:opacity-100 transition-opacity" />
 
           {/* Main Holographic Plate */}
-          <div className="glass-dark p-10 md:p-12 rounded-[48px] border-white/10 relative backdrop-blur-3xl shadow-[0_0_100px_rgba(139,92,246,0.1)] overflow-hidden">
+          <div className="glass-dark p-10 md:p-12 rounded-[48px] border-white/10 relative backdrop-blur-3xl shadow-[0_0_100px_rgba(139,92,246,0.1)] overflow-hidden neon-border">
             {/* Corner HUD Markers */}
             <div className="absolute top-6 left-6 w-4 h-4 border-t border-l border-white/20" />
             <div className="absolute top-6 right-6 w-4 h-4 border-t border-r border-white/20" />

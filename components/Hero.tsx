@@ -2,6 +2,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Play, Sparkles, Video, Users, Mic, MessageSquare, Share2, Orbit, ShieldCheck } from 'lucide-react';
 import Logo from './Logo';
+import BackgroundVideo from './BackgroundVideo';
 
 interface HeroProps {
   onJoin?: () => void;
@@ -12,7 +13,6 @@ const Hero: React.FC<HeroProps> = ({ onJoin }) => {
   const [sectionOpacity, setSectionOpacity] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
   const sectionRef = useRef<HTMLElement>(null);
-  const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -23,13 +23,6 @@ const Hero: React.FC<HeroProps> = ({ onJoin }) => {
     );
     if (sectionRef.current) observer.observe(sectionRef.current);
     return () => observer.disconnect();
-  }, []);
-
-  useEffect(() => {
-    const video = videoRef.current;
-    if (video) {
-      video.play().catch(err => console.warn('Video autoplay failed:', err));
-    }
   }, []);
 
   const handleMouseMove = (e: React.MouseEvent) => {
@@ -44,20 +37,7 @@ const Hero: React.FC<HeroProps> = ({ onJoin }) => {
     <section ref={sectionRef} className="relative pt-40 pb-32 overflow-hidden perspective-2000">
       {/* Background Video */}
       <div className="absolute inset-0 z-0 pointer-events-none">
-        <video
-          ref={videoRef}
-          autoPlay
-          muted
-          loop
-          playsInline
-          preload="auto"
-          poster="https://res.cloudinary.com/di9eeahdy/video/upload/so_0,f_jpg,q_auto/v1766722699/output_yacgth.jpg"
-          className="w-full h-full object-cover animate-in fade-in duration-1000"
-        >
-          <source src="https://res.cloudinary.com/di9eeahdy/video/upload/f_auto,q_auto/v1766722699/output_yacgth.webm" type="video/webm" />
-          <source src="https://res.cloudinary.com/di9eeahdy/video/upload/f_auto,q_auto/v1766722699/output_yacgth.mp4" type="video/mp4" />
-          Your browser does not support the video tag.
-        </video>
+        <BackgroundVideo className="animate-in fade-in duration-1000" />
         {/* Optional cinematic overlay */}
         <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-transparent to-black/20 backdrop-blur-[0.5px]" />
         <div className="absolute top-1/4 left-1/4 w-[500px] h-[500px] bg-purple-600/10 blur-[150px] rounded-full" />

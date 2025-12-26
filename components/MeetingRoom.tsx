@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
+import { io, Socket } from 'socket.io-client';
 import { 
   Mic, MicOff, Video, VideoOff, PhoneOff, 
   Sparkles, MessageSquare, Layout, 
@@ -44,6 +45,10 @@ const MeetingRoom: React.FC<MeetingRoomProps> = ({ onExit, onSignOut }) => {
   const [showCanvas, setShowCanvas] = useState(false);
   const [activeTab, setActiveTab] = useState<'chat' | 'memory' | 'people'>('chat');
   const [showSignOutModal, setShowSignOutModal] = useState(false);
+  const [chatMessages, setChatMessages] = useState<Array<{id: string, user: string, message: string, timestamp: Date}>>([]);
+  const [chatInput, setChatInput] = useState('');
+  const socketRef = useRef<Socket | null>(null);
+  const meetingId = 'demo-meeting'; // For demo, use a fixed ID
   
   // Audio Feedback Logic
   const audioCtxRef = useRef<AudioContext | null>(null);
@@ -123,6 +128,36 @@ const MeetingRoom: React.FC<MeetingRoomProps> = ({ onExit, onSignOut }) => {
         osc.stop(now + 0.2);
         break;
     }
+  };
+
+  // Socket.IO connection
+  useEffect(() => {
+    socketRef.current = io('http://localhost:5000');
+    const socket = socketRef.current;
+
+    socket.emit('join-meeting', meetingId);
+
+    socket.on('receive-message', (data: {user: string, message: string, timestamp: Date}) => {
+      setChatMessages(prev => [...prev, { ...data, id: Date.now().toString() }]);
+    });
+
+    return () => {
+      socket.emit('leave-meeting', meetingId);
+      socket.disconnect();
+    };
+  }, []);
+
+  const sendMessage = () => {
+    if (!chatInput.trim()) return;
+    const messageData = {
+      meetingId,
+      user: 'You', // In real app, get from user state
+      message: chatInput,
+      timestamp: new Date()
+    };
+    socketRef.current?.emit('send-message', messageData);
+    setChatMessages(prev => [...prev, { ...messageData, id: Date.now().toString() }]);
+    setChatInput('');
   };
 
   // Canvas State
@@ -620,6 +655,25 @@ const MeetingRoom: React.FC<MeetingRoomProps> = ({ onExit, onSignOut }) => {
                 </div>
               )}
 
+              {activeTab === 'chat' && (
+                <div className="space-y-6 animate-in fade-in slide-in-from-right-4">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Meeting Chat</h4>
+                  </div>
+                  <div className="space-y-3 max-h-96 overflow-y-auto">
+                    {chatMessages.map((msg) => (
+                      <div key={msg.id} className="p-3 glass rounded-2xl border-white/5">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-[10px] font-bold text-purple-400">{msg.user}</span>
+                          <span className="text-[9px] text-gray-600">{msg.timestamp.toLocaleTimeString()}</span>
+                        </div>
+                        <p className="text-[11px]">{msg.message}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {activeTab === 'memory' && (
                 <div className="space-y-6 animate-in fade-in slide-in-from-right-4">
                    <div className="relative">
@@ -640,8 +694,17 @@ const MeetingRoom: React.FC<MeetingRoomProps> = ({ onExit, onSignOut }) => {
 
             <div className="p-6 border-t border-white/5 bg-white/[0.01]">
                <div className="relative">
-                  <input placeholder="Ask Aether for help..." className="w-full bg-white/5 border border-white/10 rounded-2xl py-3.5 pl-5 pr-12 text-[11px] focus:outline-none focus:border-purple-500/50" />
-                  <button className="absolute right-2 top-1.5 p-2 bg-white text-black rounded-xl hover:scale-105 active:scale-90 transition-all shadow-lg" onClick={() => playSound('click')}>
+                  <input 
+                    placeholder={activeTab === 'chat' ? "Type a message..." : "Ask Aether for help..."} 
+                    value={activeTab === 'chat' ? chatInput : ''} 
+                    onChange={(e) => activeTab === 'chat' && setChatInput(e.target.value)}
+                    onKeyPress={(e) => activeTab === 'chat' && e.key === 'Enter' && sendMessage()}
+                    className="w-full bg-white/5 border border-white/10 rounded-2xl py-3.5 pl-5 pr-12 text-[11px] focus:outline-none focus:border-purple-500/50" 
+                  />
+                  <button 
+                    className="absolute right-2 top-1.5 p-2 bg-white text-black rounded-xl hover:scale-105 active:scale-90 transition-all shadow-lg" 
+                    onClick={() => activeTab === 'chat' ? sendMessage() : playSound('click')}
+                  >
                     <Send size={14} />
                   </button>
                </div>

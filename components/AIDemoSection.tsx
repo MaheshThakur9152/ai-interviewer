@@ -19,17 +19,29 @@ const AIDemoSection: React.FC = () => {
     setTilt({ x: x * 8, y: -y * 8 });
   };
 
-  const handleSimulatedSend = () => {
+  const handleSend = async () => {
     if (!prompt) return;
     setLoading(true);
     const userMsg = prompt;
     setMessages(prev => [...prev, { role: 'user', text: userMsg }]);
     setPrompt('');
 
-    setTimeout(() => {
-      setMessages(prev => [...prev, { role: 'ai', text: `That's a visionary concept. I've initiated a collaborative canvas for the brainstorming session and generated a starting visual for "${userMsg}".` }]);
+    try {
+      const response = await fetch('http://localhost:5000/api/ai/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ message: userMsg }),
+      });
+      const data = await response.json();
+      setMessages(prev => [...prev, { role: 'ai', text: data.response }]);
+    } catch (error) {
+      console.error('Error:', error);
+      setMessages(prev => [...prev, { role: 'ai', text: 'Sorry, I encountered an error. Please try again.' }]);
+    } finally {
       setLoading(false);
-    }, 1500);
+    }
   };
 
   return (
@@ -161,12 +173,12 @@ const AIDemoSection: React.FC = () => {
                       type="text"
                       value={prompt}
                       onChange={(e) => setPrompt(e.target.value)}
-                      onKeyPress={(e) => e.key === 'Enter' && handleSimulatedSend()}
+                      onKeyPress={(e) => e.key === 'Enter' && handleSend()}
                       placeholder="Ask the AI core anything..."
                       className="relative w-full bg-white/[0.03] border border-white/10 rounded-[20px] px-6 py-4 text-sm focus:outline-none focus:border-purple-500/50 transition-all pr-14 placeholder:text-gray-600 font-medium"
                     />
                     <button 
-                      onClick={handleSimulatedSend}
+                      onClick={handleSend}
                       disabled={!prompt}
                       className="absolute right-2.5 top-2 p-2.5 rounded-xl bg-white text-black hover:scale-110 active:scale-95 transition-all shadow-lg disabled:opacity-20 disabled:grayscale"
                     >
