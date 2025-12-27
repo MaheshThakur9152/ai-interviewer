@@ -1,0 +1,78 @@
+{
+  "expo": {
+    "name": "my-stream-video",
+    "slug": "my-stream-video",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bitcode": false,
+      "bundleIdentifier": "com.maheshus42.mystreamvideo"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      },
+      "edgeToEdgeEnabled": true,
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "android.permission.BLUETOOTH",
+        "android.permission.BLUETOOTH_CONNECT",
+        "android.permission.BLUETOOTH_ADMIN",
+        "android.permission.WAKE_LOCK",
+        "android.permission.ACCESS_NETWORK_STATE",
+        "android.permission.CAMERA",
+        "android.permission.INTERNET",
+        "android.permission.MODIFY_AUDIO_SETTINGS",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.SYSTEM_ALERT_WINDOW"
+      ],
+      "package": "com.maheshus42.mystreamvideo"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "@stream-io/video-react-native-sdk",
+      "@config-plugins/react-native-webrtc",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "minSdkVersion": 24,
+            "compileSdkVersion": 35,
+            "kotlinVersion": "2.1.21",
+            "packagingOptions": {
+              "pickFirst": [
+                "lib/x86/libc++_shared.so",
+                "lib/x86_64/libc++_shared.so",
+                "lib/armeabi-v7a/libc++_shared.so",
+                "lib/arm64-v8a/libc++_shared.so",
+                "**/libc++_shared.so",
+                "**/libjingle_peerconnection_so.so"
+              ]
+            }
+          },
+          "ios": {
+            "deploymentTarget": "15.1"
+          }
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "a9b293b3-75c0-4a2c-aa96-e10a295b8862"
+      }
+    },
+    "owner": "maheshus42"
+  }
+}
