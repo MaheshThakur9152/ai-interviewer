@@ -1,0 +1,142 @@
+[
+    {
+        "id": 1,
+        "title": "Two Sum",
+        "difficulty": "Easy",
+        "description": "Given an array of integers nums and an integer target, return indices of the two numbers such that they add up to target.",
+        "solution": "def twoSum(nums, target):\n    mp = {}\n    for i, n in enumerate(nums):\n        if target - n in mp:\n            return [mp[target-n], i]\n        mp[n] = i"
+    },
+    {
+        "id": 2,
+        "title": "Kadane’s Algorithm",
+        "difficulty": "Medium",
+        "description": "Find the contiguous subarray with the largest sum.",
+        "solution": "def maxSubArray(nums):\n    cur = best = nums[0]\n    for n in nums[1:]:\n        cur = max(n, cur+n)\n        best = max(best, cur)\n    return best"
+    },
+    {
+        "id": 3,
+        "title": "Majority Element",
+        "difficulty": "Easy",
+        "description": "Return the majority element (appears more than n/2 times).",
+        "solution": "def majorityElement(nums):\n    count = candidate = 0\n    for n in nums:\n        if count == 0: candidate = n\n        count += 1 if n == candidate else -1\n    return candidate"
+    },
+    {
+        "id": 4,
+        "title": "Sort Colors",
+        "difficulty": "Medium",
+        "description": "Sort array of 0s, 1s, and 2s in-place.",
+        "solution": "def sortColors(nums):\n    low, mid, high = 0, 0, len(nums)-1\n    while mid <= high:\n        if nums[mid]==0:\n            nums[low],nums[mid]=nums[mid],nums[low]\n            low+=1;mid+=1\n        elif nums[mid]==1:\n            mid+=1\n        else:\n            nums[mid],nums[high]=nums[high],nums[mid]\n            high-=1"
+    },
+    {
+        "id": 5,
+        "title": "Merge Intervals",
+        "difficulty": "Medium",
+        "description": "Merge overlapping intervals.",
+        "solution": "def merge(intervals):\n    intervals.sort()\n    res = [intervals[0]]\n    for i in intervals[1:]:\n        if i[0] <= res[-1][1]:\n            res[-1][1] = max(res[-1][1], i[1])\n        else:\n            res.append(i)\n    return res"
+    },
+    {
+        "id": 6,
+        "title": "Longest Substring Without Repeating",
+        "difficulty": "Medium",
+        "description": "Find length of longest substring without repeating characters.",
+        "solution": "def lengthOfLongestSubstring(s):\n    seen=set()\n    l=ans=0\n    for r in range(len(s)):\n        while s[r] in seen:\n            seen.remove(s[l]);l+=1\n        seen.add(s[r])\n        ans=max(ans,r-l+1)\n    return ans"
+    },
+    {
+        "id": 7,
+        "title": "Valid Palindrome",
+        "difficulty": "Easy",
+        "description": "Check if string is palindrome ignoring non-alphanumeric.",
+        "solution": "def isPalindrome(s):\n    s = ''.join(ch.lower() for ch in s if ch.isalnum())\n    return s == s[::-1]"
+    },
+    {
+        "id": 8,
+        "title": "Longest Palindromic Substring",
+        "difficulty": "Medium",
+        "description": "Find the longest palindromic substring.",
+        "solution": "def longestPalindrome(s):\n    res=\"\"\n    for i in range(len(s)):\n        l=r=i\n        while l>=0 and r<len(s) and s[l]==s[r]:\n            if r-l+1>len(res): res=s[l:r+1]\n            l-=1;r+=1\n        l,r=i,i+1\n        while l>=0 and r<len(s) and s[l]==s[r]:\n            if r-l+1>len(res): res=s[l:r+1]\n            l-=1;r+=1\n    return res"
+    },
+    {
+        "id": 9,
+        "title": "Binary Search",
+        "difficulty": "Easy",
+        "description": "Search target in sorted array.",
+        "solution": "def binarySearch(arr, target):\n    l,r=0,len(arr)-1\n    while l<=r:\n        m=(l+r)//2\n        if arr[m]==target:return m\n        if arr[m]<target:l=m+1\n        else:r=m-1\n    return -1"
+    },
+    {
+        "id": 10,
+        "title": "Search in Rotated Sorted Array",
+        "difficulty": "Medium",
+        "description": "Search in rotated sorted array.",
+        "solution": "def search(nums,target):\n    l,r=0,len(nums)-1\n    while l<=r:\n        m=(l+r)//2\n        if nums[m]==target:return m\n        if nums[l]<=nums[m]:\n            if nums[l]<=target<nums[m]: r=m-1\n            else: l=m+1\n        else:\n            if nums[m]<target<=nums[r]: l=m+1\n            else: r=m-1\n    return -1"
+    },
+    {
+        "id": 11,
+        "title": "Reverse Linked List",
+        "difficulty": "Easy",
+        "description": "Reverse a singly linked list.",
+        "solution": "def reverseList(head):\n    prev=None\n    while head:\n        nxt=head.next\n        head.next=prev\n        prev=head\n        head=nxt\n    return prev"
+    },
+    {
+        "id": 12,
+        "title": "Detect Cycle",
+        "difficulty": "Easy",
+        "description": "Detect cycle in linked list.",
+        "solution": "def hasCycle(head):\n    slow=fast=head\n    while fast and fast.next:\n        slow=slow.next\n        fast=fast.next.next\n        if slow==fast: return True\n    return False"
+    },
+    {
+        "id": 13,
+        "title": "Merge Two Sorted Lists",
+        "difficulty": "Easy",
+        "description": "Merge two sorted linked lists.",
+        "solution": "def mergeTwoLists(l1,l2):\n    dummy=cur=ListNode()\n    while l1 and l2:\n        if l1.val<l2.val:\n            cur.next=l1;l1=l1.next\n        else:\n            cur.next=l2;l2=l2.next\n        cur=cur.next\n    cur.next=l1 or l2\n    return dummy.next"
+    },
+    {
+        "id": 14,
+        "title": "Valid Parentheses",
+        "difficulty": "Easy",
+        "description": "Check if parentheses are valid.",
+        "solution": "def isValid(s):\n    stack=[]\n    mp={')':'(',']':'[','}':'{'}\n    for c in s:\n        if c in mp:\n            if not stack or stack.pop()!=mp[c]:\n                return False\n        else: stack.append(c)\n    return not stack"
+    },
+    {
+        "id": 15,
+        "title": "Next Greater Element",
+        "difficulty": "Medium",
+        "description": "Find next greater element.",
+        "solution": "def nextGreater(nums):\n    res=[-1]*len(nums)\n    stack=[]\n    for i in range(len(nums)):\n        while stack and nums[i]>nums[stack[-1]]:\n            res[stack.pop()]=nums[i]\n        stack.append(i)\n    return res"
+    },
+    {
+        "id": 16,
+        "title": "Inorder Traversal",
+        "difficulty": "Easy",
+        "description": "Inorder traversal of binary tree.",
+        "solution": "def inorder(root):\n    return inorder(root.left)+[root.val]+inorder(root.right) if root else []"
+    },
+    {
+        "id": 17,
+        "title": "Lowest Common Ancestor",
+        "difficulty": "Medium",
+        "description": "LCA of binary tree.",
+        "solution": "def lowestCommonAncestor(root,p,q):\n    if not root or root==p or root==q: return root\n    l=lowestCommonAncestor(root.left,p,q)\n    r=lowestCommonAncestor(root.right,p,q)\n    if l and r: return root\n    return l or r"
+    },
+    {
+        "id": 18,
+        "title": "Height of Binary Tree",
+        "difficulty": "Easy",
+        "description": "Height of binary tree.",
+        "solution": "def height(root):\n    if not root: return 0\n    return 1 + max(height(root.left), height(root.right))"
+    },
+    {
+        "id": 19,
+        "title": "BFS Traversal",
+        "difficulty": "Medium",
+        "description": "BFS of a graph.",
+        "solution": "def bfs(graph,start):\n    q=deque([start]);vis=set([start]);res=[]\n    while q:\n        node=q.popleft();res.append(node)\n        for nei in graph[node]:\n            if nei not in vis: vis.add(nei);q.append(nei)\n    return res"
+    },
+    {
+        "id": 20,
+        "title": "Fibonacci (DP)",
+        "difficulty": "Easy",
+        "description": "N-th Fibonacci number.",
+        "solution": "def fib(n):\n    if n<=1:return n\n    dp=[0]*(n+1);dp[1]=1\n    for i in range(2,n+1): dp[i]=dp[i-1]+dp[i-2]\n    return dp[n]"
+    }
+]

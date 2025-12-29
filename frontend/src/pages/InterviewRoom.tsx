@@ -133,18 +133,46 @@ const InterviewRoom: React.FC<InterviewRoomProps> = ({ onExit, onSignOut, user }
                         </div>
                     </div>
 
-                    {/* AI Status Area */}
-                    <div className="h-14 glass rounded-xl border border-white/5 flex items-center px-6 gap-4 relative overflow-hidden shrink-0">
-                        <div className="absolute inset-0 bg-gradient-to-r from-purple-500/5 to-blue-500/5" />
-                        <div className="w-8 h-8 rounded-full bg-purple-500/10 flex items-center justify-center shrink-0 animate-pulse">
-                            <Sparkles size={16} className="text-purple-400" />
-                        </div>
-                        <div className="flex items-center gap-3 overflow-hidden">
-                            <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest shrink-0">AI STATUS</p>
-                            <div className="h-4 w-[1px] bg-white/10" />
-                            <p className="text-sm font-medium text-purple-200 truncate">
-                                {terminalOutput?.message ? terminalOutput.message : "Listening to your solution..."}
-                            </p>
+                    {/* AI Status Area - Dynamic Voice Visualizer */}
+                    <div className="h-16 glass rounded-xl border border-white/5 flex items-center px-6 justify-between relative overflow-hidden shrink-0 transition-all duration-500">
+                        {/* Background Pulse Effect when AI Speaking */}
+                        <div className={`absolute inset-0 bg-gradient-to-r from-purple-500/10 to-blue-500/10 transition-opacity duration-500 ${terminalOutput?.type === 'info' || isMicActive ? 'opacity-100' : 'opacity-0'}`} />
+
+                        <div className="flex items-center gap-4 relative z-10 w-full">
+                            {/* Visualizer Icon */}
+                            <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 transition-all duration-300 ${isMicActive ? 'bg-red-500/20 shadow-[0_0_15px_rgba(239,68,68,0.4)]' : 'bg-purple-500/10'}`}>
+                                {isMicActive ? (
+                                    <div className="flex gap-[2px] items-center h-4">
+                                        {[1, 2, 3, 4, 5].map(i => (
+                                            <div key={i}
+                                                className="w-[3px] bg-red-400 rounded-full animate-pulse"
+                                                style={{ height: `${Math.random() * 12 + 4}px`, animationDuration: `${0.5 + Math.random() * 0.5}s` }}
+                                            />
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <Sparkles size={18} className="text-purple-400" />
+                                )}
+                            </div>
+
+                            <div className="flex flex-col overflow-hidden w-full">
+                                <div className="flex justify-between items-center">
+                                    <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest shrink-0 mb-0.5">
+                                        {isMicActive ? 'LISTENING TO CANDIDATE' : 'AI ASSISTANT STANDBY'}
+                                    </p>
+                                    {/* Fake Waveform when AI is "thinking" or "speaking" (simulated by terminal output updates) */}
+                                    {terminalOutput?.type === 'info' && (
+                                        <div className="flex items-center gap-0.5 h-3">
+                                            {[...Array(12)].map((_, i) => (
+                                                <div key={i} className="w-[2px] bg-purple-500 rounded-full animate-[bounce_1s_infinite]" style={{ animationDelay: `${i * 0.05}s` }} />
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                                <p className="text-sm font-medium text-purple-200 truncate font-mono">
+                                    {terminalOutput?.message || "ready for your input..."}
+                                </p>
+                            </div>
                         </div>
                     </div>
                 </div>

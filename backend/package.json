@@ -8,6 +8,7 @@
     "dev": "nodemon server.js"
   },
   "dependencies": {
+    "@deepgram/sdk": "^4.11.3",
     "@google/generative-ai": "^0.21.0",
     "bcryptjs": "^2.4.3",
     "body-parser": "^2.2.1",
