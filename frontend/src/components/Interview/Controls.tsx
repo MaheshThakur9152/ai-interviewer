@@ -12,14 +12,32 @@ const Controls: React.FC = () => {
             const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
             recognitionRef.current = new SpeechRecognition();
             recognitionRef.current.continuous = true;
-            recognitionRef.current.interimResults = false;
+            recognitionRef.current.interimResults = true; // Enable real-time feedback
             recognitionRef.current.lang = 'en-US';
 
             recognitionRef.current.onresult = (event: any) => {
-                const transcript = event.results[event.results.length - 1][0].transcript;
-                console.log("Voice input received:", transcript);
-                if (transcript.trim()) {
-                    handleUserVoiceInput(transcript);
+                let finalTranscript = '';
+                let interimTranscript = '';
+
+                for (let i = event.resultIndex; i < event.results.length; ++i) {
+                    if (event.results[i].isFinal) {
+                        finalTranscript += event.results[i][0].transcript;
+                    } else {
+                        interimTranscript += event.results[i][0].transcript;
+                    }
+                }
+
+                // Show interim text as a "phantom" message if we wanted, 
+                // but for now just logging to confirm it works. 
+                // The 'isFinal' block handles the actual submission.
+
+                if (interimTranscript) {
+                    setTerminalOutput({ type: 'info', message: `Listening: ${interimTranscript}` });
+                }
+
+                if (finalTranscript.trim()) {
+                    console.log("Final Input:", finalTranscript);
+                    handleUserVoiceInput(finalTranscript);
                 }
             };
 

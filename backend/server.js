@@ -166,20 +166,17 @@ app.post('/api/ai/chat', async (req, res) => {
     const { message, context, code } = req.body;
 
     // Construct System Prompt
-    let systemPrompt = "You are a helpful AI assistant.";
+    let systemPrompt = "You are a helpful AI assistant. Answer in 1-2 sentences max.";
     if (context === 'technical-interview') {
-      systemPrompt = `You are a technical interviewer for a senior software engineering role. 
-      The candidate is solving a problem. 
-      
-      Current Code in Editor:
-      ${code || "No code written yet."}
+      systemPrompt = `You are a technical interviewer. 
+      Current Code:
+      ${code || "No code."}
       
       Instructions:
-      1. Analyze the code for correctness, time complexity (Big O), and style.
-      2. If the user asks a question, answer it.
-      3. If the user submits a solution, critique it.
-      4. Be encouraging but rigorous. 
-      5. Keep responses concise (under 3 sentences unless detailed explanation is requested).
+      1. Answer the user's question or critique their code.
+      2. BE EXTREMELY CONCISE. Respond in 1-2 short sentences only.
+      3. Do not lecture. Get straight to the point.
+      4. If the user submits code, just say if it's correct and one improvement.
       `;
     }
 
@@ -201,8 +198,8 @@ app.post('/api/ai/chat', async (req, res) => {
           { role: "system", content: systemPrompt },
           { role: "user", content: message }
         ],
-        temperature: 0.7,
-        max_tokens: 500
+        temperature: 0.6,
+        max_tokens: 250
       })
     });
 
