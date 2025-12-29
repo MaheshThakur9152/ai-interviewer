@@ -1,0 +1,8 @@
+{
+  "name": "InterviewAI - High-Fidelity Demo",
+  "description": "An AI-powered interview and career training platform for students and early professionals, featuring real-time simulations and deep performance analytics.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}
