@@ -53,13 +53,23 @@ const Controls: React.FC = () => {
         const startRecognition = async () => {
             if (isMicActive) {
                 try {
-                    // Request mic permission via getUserMedia first
-                    await navigator.mediaDevices.getUserMedia({ audio: true });
-                    recognitionRef.current?.start();
+                    // Explicitly request permissions every time we start to ensure browser doesn't block
+                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+
+                    // Stop the stream immediately, we just needed the permission grant
+                    stream.getTracks().forEach(track => track.stop());
+
+                    try {
+                        recognitionRef.current?.start();
+                        console.log("Mic recognition started");
+                    } catch (startError) {
+                        // Only log if it's not the "already started" error
+                        console.warn("Mic start warning:", startError);
+                    }
                 } catch (e) {
-                    console.error("Mic permission denied:", e);
+                    console.error("Mic permission/start failed:", e);
                     setMicActive(false);
-                    addMessage('assistant', 'Please allow microphone access to use voice features.');
+                    addMessage('assistant', 'Microphone access denied. Please allow it in browser settings.');
                 }
             } else {
                 try { recognitionRef.current?.stop(); } catch (e) { console.error(e); }
@@ -100,32 +110,51 @@ const Controls: React.FC = () => {
 
     const speakResponse = (text: string) => {
         setAudioPlaying(true);
-
-        // Cancel any ongoing speech
-        window.speechSynthesis.cancel();
+        window.speechSynthesis.cancel(); // kill current
 
         const utterance = new SpeechSynthesisUtterance(text);
-        utterance.onend = () => {
-            setAudioPlaying(false);
-            console.log("Speech synthesis completed");
-        };
-        utterance.onerror = (error) => {
-            console.error("Speech synthesis error:", error);
-            setAudioPlaying(false);
-        };
-        utterance.rate = 1.0;
-        utterance.pitch = 1.0;
-        utterance.volume = 1.0; // Max volume
 
-        // Select a good voice if available
-        const voices = window.speechSynthesis.getVoices();
-        const englishVoice = voices.find(v => v.lang.includes('en-US') || v.lang.includes('en-GB'));
-        if (englishVoice) {
-            utterance.voice = englishVoice;
+        // Voice Selection Logic
+        const loadVoice = () => {
+            const voices = window.speechSynthesis.getVoices();
+            if (voices.length > 0) {
+                // Prefer "Google US English" or similar natural voices if available
+                const preferredVoice = voices.find(v =>
+                    v.name.includes('Google') && v.lang.includes('en-US'))
+                    || voices.find(v => v.lang.includes('en-US'))
+                    || voices[0];
+
+                if (preferredVoice) utterance.voice = preferredVoice;
+            }
+        };
+
+        loadVoice();
+        // If voices aren't loaded yet, wait for them
+        if (window.speechSynthesis.getVoices().length === 0) {
+            window.speechSynthesis.onvoiceschanged = loadVoice;
         }
 
-        console.log("Starting speech synthesis...");
-        window.speechSynthesis.speak(utterance);
+        utterance.rate = 1.0;
+        utterance.pitch = 1.0;
+        utterance.volume = 1.0;
+
+        utterance.onend = () => {
+            setAudioPlaying(false);
+            console.log("TTS Finished");
+        };
+
+        utterance.onerror = (e) => {
+            console.error("TTS Error:", e);
+            setAudioPlaying(false);
+        };
+
+        console.log("Speaking:", text);
+        try {
+            window.speechSynthesis.speak(utterance);
+        } catch (err) {
+            console.error("Playback failed:", err);
+            setAudioPlaying(false);
+        }
     };
 
     const handleSubmitCode = async () => {

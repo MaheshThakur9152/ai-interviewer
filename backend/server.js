@@ -208,7 +208,7 @@ app.post('/api/ai/chat', async (req, res) => {
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error("DigitalOcean API Error:", errorText);
+      console.error(`DigitalOcean API Error [${response.status}]:`, errorText);
       throw new Error(`DigitalOcean API Error (${response.status}): ${errorText}`);
     }
 

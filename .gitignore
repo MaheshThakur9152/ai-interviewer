@@ -25,3 +25,7 @@ dist-ssr
 
 # Large files
 public/clideo_editor_6241c33ddc0f4805bfc82ef274c99941.gif
+
+# Environment variables
+.env
+backend/.env

@@ -4,46 +4,75 @@ export const dsaQuestions = [
         id: 1,
         title: "Two Sum",
         difficulty: "Easy",
-        description: "Find indices of two numbers that sum to target.",
+        description: "Given an array of integers nums and an integer target, return indices of the two numbers such that they add up to target. You may assume that each input would have exactly one solution, and you may not use the same element twice.",
         solution: `def twoSum(nums, target):
     mp = {}
     for i, n in enumerate(nums):
         if target - n in mp:
             return [mp[target-n], i]
         mp[n] = i`,
-        videoUrl: "https://youtu.be/UXDSeD9mN-k"
+        videoUrl: "https://youtu.be/UXDSeD9mN-k",
+        example: {
+            input: "nums = [2,7,11,15], target = 9",
+            output: "[0,1]",
+            explanation: "Because nums[0] + nums[1] == 9, we return [0, 1]."
+        },
+        constraints: [
+            "2 <= nums.length <= 10^4",
+            "-10^9 <= nums[i] <= 10^9",
+            "-10^9 <= target <= 10^9"
+        ]
     },
     {
         id: 2,
         title: "Kadane’s Algorithm",
         difficulty: "Medium",
-        description: "Maximum sum of contiguous subarray.",
+        description: "Given an integer array nums, find the contiguous subarray (containing at least one number) which has the largest sum and return its sum.",
         solution: `def maxSubArray(nums):
     cur = best = nums[0]
     for n in nums[1:]:
         cur = max(n, cur+n)
         best = max(best, cur)
     return best`,
-        videoUrl: "https://youtu.be/w_KEocd__20"
+        videoUrl: "https://youtu.be/w_KEocd__20",
+        example: {
+            input: "nums = [-2,1,-3,4,-1,2,1,-5,4]",
+            output: "6",
+            explanation: "The subarray [4,-1,2,1] has the largest sum 6."
+        },
+        constraints: [
+            "1 <= nums.length <= 10^5",
+            "-10^4 <= nums[i] <= 10^4"
+        ]
     },
     {
         id: 3,
         title: "Majority Element",
         difficulty: "Easy",
-        description: "Element appearing > n/2 times.",
+        description: "Given an array nums of size n, return the majority element. The majority element is the element that appears more than ⌊n / 2⌋ times.",
         solution: `def majorityElement(nums):
     count = candidate = 0
     for n in nums:
         if count == 0: candidate = n
         count += 1 if n == candidate else -1
     return candidate`,
-        videoUrl: "https://youtu.be/nP_ns3uSh80"
+        videoUrl: "https://youtu.be/nP_ns3uSh80",
+        example: {
+            input: "nums = [3,2,3]",
+            output: "3",
+            explanation: ""
+        },
+        constraints: [
+            "n == nums.length",
+            "1 <= n <= 5 * 10^4",
+            "-10^9 <= nums[i] <= 10^9"
+        ]
     },
     {
         id: 4,
         title: "Sort Colors",
         difficulty: "Medium",
-        description: "Sort array of 0,1,2.",
+        description: "Given an array nums with n objects colored red, white, or blue, sort them in-place so that objects of the same color are adjacent, with the colors in the order red, white, and blue.",
         solution: `def sortColors(nums):
     low, mid, high = 0, 0, len(nums)-1
     while mid <= high:
@@ -55,7 +84,17 @@ export const dsaQuestions = [
         else:
             nums[mid],nums[high]=nums[high],nums[mid]
             high-=1`,
-        videoUrl: "https://youtu.be/oaVa-9wmpns"
+        videoUrl: "https://youtu.be/oaVa-9wmpns",
+        example: {
+            input: "nums = [2,0,2,1,1,0]",
+            output: "[0,0,1,1,2,2]",
+            explanation: ""
+        },
+        constraints: [
+            "n == nums.length",
+            "1 <= n <= 300",
+            "nums[i] is 0, 1, or 2"
+        ]
     },
     {
         id: 5,
