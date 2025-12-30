@@ -164,49 +164,22 @@ const { createClient } = require('@deepgram/sdk');
 
 // ... exist code ...
 
-// 3. Deepgram Token Endpoint (Ephemeral Key Generation)
+// 3. Deepgram Token Endpoint (Simplified for Development)
 app.get('/api/auth/deepgram', async (req, res) => {
   try {
-    const deepgram = createClient(process.env.DEEPGRAM_API_KEY);
-
-    // Create a temporary key that lasts 10 seconds (just enough to connect)
-    // Or simpler: just return a pre-configured ephemeral key if we had that logic.
-    // For this implementation, we will generate a temp key using the management API 
-    // IF the user had the permissions. 
-    // BUT, usually purely for STT/TTS demo, we might just proxy or return the public key if safe?
-    // NO. Best practice: The backend creates a key on the fly.
-
-    // Simplest approach for "Real Human" demo without complex Scopes:
-    // Just return the env key labeled as 'token' (Not production safe, but works for this demo).
-    // A better production way is generating a project key with scopes.
-
-    // Let's actually try to create a new key if we can:
-    // This requires specific permissions. If it fails, fallback to sending the ENV key (only if user trusts this env).
-
-    // FALLBACK -> Send the key directly for this session.
-    // Ideally: Use logic to generate a temporary key.
-
-    if (!process.env.DEEPGRAM_API_KEY) throw new Error("Deepgram API Key missing");
-
-    // Ideally we would return: { key: process.env.DEEPGRAM_API_KEY }
-    // But let's check if we can generate one.
-    const { result, error } = await deepgram.manage.v1.keys.create(process.env.DEEPGRAM_PROJECT_ID, {
-      comment: 'Temporary User Key',
-      scopes: ['usage:write'],
-      time_to_live_in_seconds: 60
-    });
-
-    if (error) {
-      // Fallback: Send the main key (Development only)
-      res.json({ key: process.env.DEEPGRAM_API_KEY });
-    } else {
-      res.json({ key: result.key });
+    if (!process.env.DEEPGRAM_API_KEY) {
+      console.error("DEEPGRAM_API_KEY not found in environment variables");
+      return res.status(500).json({ error: "Deepgram API key not configured" });
     }
 
-  } catch (error) {
-    // Ultimate Fallback: just return the key in .env so the frontend can work immediately
-    // WARNING: Exposes key to client.
+    console.log("Deepgram key endpoint called - returning API key");
+    // For development: directly return the API key
+    // For production: implement temporary key generation with proper project setup
     res.json({ key: process.env.DEEPGRAM_API_KEY });
+
+  } catch (error) {
+    console.error("Error in Deepgram endpoint:", error);
+    res.status(500).json({ error: "Failed to get Deepgram key" });
   }
 });
 app.post('/api/ai/chat', async (req, res) => {

@@ -1,281 +1,293 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Mic, MicOff, Play, Loader2 } from 'lucide-react';
 import { useInterviewStore } from '../../store/useInterviewStore';
-import { dsaQuestions } from '../../data/dsaQuestions';
 
 const Controls: React.FC = () => {
-    const { isMicActive, setMicActive, code, setTerminalOutput, setEditorFrozen, addMessage, setAudioPlaying } = useInterviewStore();
-    const [deepgramKey, setDeepgramKey] = useState<string | null>(null);
-    const [connectionState, setConnectionState] = useState<'closed' | 'connecting' | 'connected'>('closed');
+    const { isMicActive, setMicActive, code, setTerminalOutput, addMessage, setAudioPlaying } = useInterviewStore();
+    const [isConnected, setIsConnected] = useState(false);
+    const [isSpeaking, setIsSpeaking] = useState(false);
 
-    // Agent Refs
-    const socketRef = useRef<WebSocket | null>(null);
-    const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+    const deepgramSocketRef = useRef<WebSocket | null>(null);
     const audioContextRef = useRef<AudioContext | null>(null);
-    const nextStartTimeRef = useRef<number>(0);
 
-    // 1. Fetch Deepgram Key
+    const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
     useEffect(() => {
-        const fetchKey = async () => {
-            const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-            try {
-                const res = await fetch(`${API_URL}/api/auth/deepgram`);
-                const data = await res.json();
-                if (data.key) setDeepgramKey(data.key);
-            } catch (e) {
-                console.error("Failed to fetch Deepgram key:", e);
-            }
+        return () => {
+            cleanup();
         };
-        fetchKey();
     }, []);
 
-    // 2. Manage Voice Agent Connection
     useEffect(() => {
-        if (isMicActive && deepgramKey) {
+        if (isMicActive) {
             startAgent();
         } else {
-            stopAgent();
+            cleanup();
         }
-        return () => stopAgent();
-    }, [isMicActive, deepgramKey]);
+    }, [isMicActive]);
 
     const startAgent = async () => {
-        if (!deepgramKey) return;
-        setConnectionState('connecting');
-
         try {
-            // A. Setup Audio Context for Playback
-            audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
-            nextStartTimeRef.current = audioContextRef.current.currentTime;
+            // Get Deepgram API key from backend
+            const response = await fetch(`${API_URL}/api/auth/deepgram`);
+            const data = await response.json();
 
-            // B. Connect to Deepgram Agent API
-            const ws = new WebSocket('wss://agent.deepgram.com/agent', ['token', deepgramKey]);
-            socketRef.current = ws;
+            if (!data.key) {
+                setTerminalOutput({ type: 'error', message: 'Failed to get Deepgram API key' });
+                setMicActive(false);
+                return;
+            }
 
-            ws.onopen = async () => {
-                console.log("Agent Connected");
-                setConnectionState('connected');
+            const apiKey = data.key.trim();
 
-                // C. Send Configuration
-                const kbString = dsaQuestions.map(q =>
-                    `Question: ${q.title}\nDifficulty: ${q.difficulty}\nDescription: ${q.description}\nSolution Python:\n${q.solution}\n`
-                ).join("\n---\n");
+            // Start with greeting
+            const greeting = "Hello! I'm your AI interview coach. I'm here to help you practice for technical interviews. Are you ready to start?";
+            await speak(greeting);
+            addMessage('assistant', greeting);
 
-                const config = {
-                    type: "Settings",
-                    audio: {
-                        input: { encoding: "linear16", sample_rate: 48000 },
-                        output: { encoding: "linear16", sample_rate: 24000, container: "none" }
-                    },
-                    agent: {
-                        language: "en",
-                        speak: { provider: { type: "eleven_labs", model_id: "eleven_multilingual_v2", voice_id: "cgSgspJ2msm6clMCkdW9" } },
-                        listen: { provider: { type: "deepgram", version: "v1", model: "nova-3" } },
-                        think: {
-                            provider: { type: "google", model: "gemini-2.5-flash" },
-                            prompt: `#Role\nYou are an AI interview coach helping users prepare for software and technical interviews.\n\n#Knowledge Base (Questions & Solutions)\n${kbString}\n\n#General Guidelines\n-Be warm, confident, and encouraging.\n-Speak clearly in simple language.\n-Keep most responses short unless asked for deeper explanation.\n` +
-                                `#Voice-Specific Instructions\n-Speak conversationally.\n-Pause after questions.\n` +
-                                `#Interview Flow Objective\n-Greet the user: "Hi, I’m your interview coach. Ready to practice?"\n` +
-                                `If user asks to start, pick a question from the Knowledge Base or ask standard behavioral ones.`
-                        },
-                        greeting: "Hello, I’m your AI interview coach. Are you ready to practice?"
-                    }
-                };
+            // Connect to Deepgram STT
+            await connectToDeepgram(apiKey);
 
-                ws.send(JSON.stringify(config));
-
-                // D. Start Microphone Recording (Linear16 48kHz for Input)
-                startMicrophone(ws);
-            };
-
-            ws.onmessage = async (event) => {
-                if (event.data instanceof Blob) {
-                    // Audio Data (Output)
-                    const arrayBuffer = await event.data.arrayBuffer();
-                    playAudioChunk(arrayBuffer);
-                    setAudioPlaying(true);
-
-                    // Reset playing state after estimated duration if idle? 
-                    // Difficult with streaming. We just set it true.
-                    // We might need a timeout to set it false if no data comes.
-                    resetSilenceTimer();
-                } else {
-                    // Text Data (Transcripts, etc.)
-                    try {
-                        const msg = JSON.parse(event.data);
-                        // Deepgram Agent typically sends JSON messages for structure
-                        // But in basic raw mode it might just send audio binary
-                        // Check documentation. Actually Agent API sends JSON control messages too.
-                        // Assuming binary is audio, text is control? 
-                        // Actually the SDK handles this. Raw WS might mix text/binary.
-                        if (msg.type === 'UserStartedSpeaking') {
-                            setTerminalOutput({ type: 'info', message: 'User Speaking...' });
-                        }
-                        if (msg.type === 'AgentStartedSpeaking') {
-                            setTerminalOutput({ type: 'info', message: 'AI Speaking...' });
-                            setAudioPlaying(true);
-                        }
-                        if (msg.type === 'AgentStoppedSpeaking') {
-                            setAudioPlaying(false);
-                        }
-                    } catch (e) { /* likely binary audio if parse fails or handled above */ }
-                }
-            };
-
-            ws.onclose = () => {
-                console.log("Agent Disconnected");
-                stopAgent();
-            };
-
-            ws.onerror = (e) => {
-                console.error("Agent Error:", e);
-                stopAgent();
-            };
-
-        } catch (e) {
-            console.error("Agent Start Failed:", e);
-            stopAgent();
+        } catch (error) {
+            console.error('Failed to start agent:', error);
+            setTerminalOutput({ type: 'error', message: 'Failed to start agent' });
+            setMicActive(false);
         }
     };
 
-    const startMicrophone = async (ws: WebSocket) => {
+    const connectToDeepgram = async (apiKey: string) => {
         try {
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: { sampleRate: 48000, channelCount: 1 } });
+            // Get microphone access
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
 
-            // Use AudioContext to resample/convert to raw PCM INT16 if needed
-            // But MediaRecorder outputting webm/opus is NOT linear16.
-            // Deepgram Agent expects RAW LINEAR16 if we specified it in config.
-            // We must convert.
+            // Create Deepgram WebSocket connection for STT
+            const deepgramUrl = 'wss://api.deepgram.com/v1/listen?encoding=linear16&sample_rate=16000&language=en&model=nova-2&smart_format=true';
+            const socket = new WebSocket(deepgramUrl, ['token', apiKey]);
 
-            const context = new AudioContext({ sampleRate: 48000 });
-            const source = context.createMediaStreamSource(stream);
-            const processor = context.createScriptProcessor(4096, 1, 1);
+            deepgramSocketRef.current = socket;
 
-            source.connect(processor);
-            processor.connect(context.destination);
+            socket.onopen = () => {
+                console.log('Deepgram STT connected');
+                setIsConnected(true);
+                setTerminalOutput({ type: 'success', message: 'Listening... speak now!' });
 
-            processor.onaudioprocess = (e) => {
-                if (ws.readyState !== WebSocket.OPEN) return;
+                // Start sending audio
+                startAudioStreaming(stream, socket);
+            };
 
+            socket.onmessage = async (message) => {
+                const data = JSON.parse(message.data);
+
+                if (data.channel?.alternatives?.[0]?.transcript) {
+                    const transcript = data.channel.alternatives[0].transcript;
+                    const isFinal = data.is_final;
+
+                    if (isFinal && transcript.trim().length > 0) {
+                        console.log('Transcript:', transcript);
+
+                        // Add user message
+                        addMessage('user', transcript);
+                        setTerminalOutput({ type: 'info', message: `You: ${transcript}` });
+
+                        // Process with AI
+                        await processWithAI(transcript);
+                    }
+                }
+            };
+
+            socket.onerror = (error) => {
+                console.error('Deepgram error:', error);
+                setTerminalOutput({ type: 'error', message: 'Speech recognition error' });
+            };
+
+            socket.onclose = () => {
+                console.log('Deepgram connection closed');
+                setIsConnected(false);
+            };
+
+        } catch (error: any) {
+            console.error('Microphone access error:', error);
+            setTerminalOutput({ type: 'error', message: 'Microphone access denied' });
+            setMicActive(false);
+        }
+    };
+
+    const startAudioStreaming = (stream: MediaStream, socket: WebSocket) => {
+        const audioContext = new AudioContext({ sampleRate: 16000 });
+        audioContextRef.current = audioContext;
+
+        const source = audioContext.createMediaStreamSource(stream);
+        const processor = audioContext.createScriptProcessor(4096, 1, 1);
+
+        source.connect(processor);
+        processor.connect(audioContext.destination);
+
+        processor.onaudioprocess = (e) => {
+            if (socket.readyState === WebSocket.OPEN && !isSpeaking) {
                 const inputData = e.inputBuffer.getChannelData(0);
-                // Downsample or convert Float32 to Int16
                 const buffer = new ArrayBuffer(inputData.length * 2);
                 const view = new DataView(buffer);
+
                 for (let i = 0; i < inputData.length; i++) {
-                    let s = Math.max(-1, Math.min(1, inputData[i]));
-                    view.setInt16(i * 2, s < 0 ? s * 0x8000 : s * 0x7FFF, true); // Little Endian
+                    const s = Math.max(-1, Math.min(1, inputData[i]));
+                    view.setInt16(i * 2, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
                 }
-                ws.send(buffer);
-            };
 
-            // Store so we can close
-            (socketRef.current as any).audioContextInput = context;
-            (socketRef.current as any).audioStream = stream;
+                socket.send(buffer);
+            }
+        };
 
-        } catch (e) {
-            console.error("Microphone Error", e);
-            stopAgent();
+        // Store for cleanup
+        (socket as any).audioProcessor = processor;
+        (socket as any).mediaStream = stream;
+    };
+
+    const processWithAI = async (userInput: string) => {
+        setTerminalOutput({ type: 'info', message: 'AI is thinking...' });
+
+        try {
+            const response = await fetch(`${API_URL}/api/ai/chat`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    message: userInput,
+                    context: 'technical-interview',
+                    code: code || ''
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error(`API error: ${response.status}`);
+            }
+
+            const data = await response.json();
+            const aiResponse = data.response;
+
+            // Add AI message
+            addMessage('assistant', aiResponse);
+            setTerminalOutput({ type: 'success', message: `AI: ${aiResponse}` });
+
+            // Speak the response
+            await speak(aiResponse);
+
+        } catch (error) {
+            console.error('AI processing error:', error);
+            const errorMsg = 'Sorry, I encountered an error. Could you please repeat that?';
+            setTerminalOutput({ type: 'error', message: errorMsg });
+            await speak(errorMsg);
         }
     };
 
-    const stopAgent = () => {
-        if (socketRef.current) {
-            const ws = socketRef.current;
-            ws.close();
-            if ((ws as any).audioContextInput) (ws as any).audioContextInput.close();
-            if ((ws as any).audioStream) (ws as any).audioStream.getTracks().forEach((t: any) => t.stop());
-            socketRef.current = null;
+    const speak = async (text: string): Promise<void> => {
+        try {
+            setIsSpeaking(true);
+            setAudioPlaying(true);
+            console.log('Speaking with Deepgram Aura:', text);
+
+            // Get Deepgram API key
+            const response = await fetch(`${API_URL}/api/auth/deepgram`);
+            const data = await response.json();
+
+            if (!data.key) {
+                throw new Error('No Deepgram API key');
+            }
+
+            const apiKey = data.key.trim();
+
+            // Call Deepgram TTS API
+            const ttsResponse = await fetch('https://api.deepgram.com/v1/speak?model=aura-asteria-en&encoding=linear16&sample_rate=24000', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Token ${apiKey}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ text })
+            });
+
+            if (!ttsResponse.ok) {
+                throw new Error(`Deepgram TTS failed: ${ttsResponse.status}`);
+            }
+
+            // Get audio data
+            const audioBlob = await ttsResponse.blob();
+            const audioUrl = URL.createObjectURL(audioBlob);
+
+            // Play audio
+            const audio = new Audio(audioUrl);
+
+            await new Promise<void>((resolve, reject) => {
+                audio.onended = () => {
+                    URL.revokeObjectURL(audioUrl);
+                    setIsSpeaking(false);
+                    setAudioPlaying(false);
+                    setTerminalOutput({ type: 'success', message: 'Listening... speak now!' });
+                    console.log('Audio playback ended');
+                    resolve();
+                };
+
+                audio.onerror = (e) => {
+                    URL.revokeObjectURL(audioUrl);
+                    setIsSpeaking(false);
+                    setAudioPlaying(false);
+                    console.error('Audio playback error:', e);
+                    reject(new Error('Audio playback failed'));
+                };
+
+                audio.play().catch(err => {
+                    console.error('Play failed:', err);
+                    reject(err);
+                });
+            });
+
+        } catch (error) {
+            console.error('TTS error:', error);
+            setIsSpeaking(false);
+            setAudioPlaying(false);
+            setTerminalOutput({ type: 'error', message: 'Speech failed - continuing without audio' });
         }
+    };
+
+    const cleanup = () => {
+        // Close Deepgram socket
+        if (deepgramSocketRef.current) {
+            const socket = deepgramSocketRef.current;
+
+            // Stop audio streaming
+            if ((socket as any).audioProcessor) {
+                (socket as any).audioProcessor.disconnect();
+            }
+            if ((socket as any).mediaStream) {
+                (socket as any).mediaStream.getTracks().forEach((track: MediaStreamTrack) => track.stop());
+            }
+
+            if (socket.readyState === WebSocket.OPEN) {
+                socket.close();
+            }
+            deepgramSocketRef.current = null;
+        }
+
+        // Close audio context
         if (audioContextRef.current) {
             audioContextRef.current.close();
             audioContextRef.current = null;
         }
-        setConnectionState('closed');
-        setMicActive(false);
+
+        setIsConnected(false);
+        setIsSpeaking(false);
         setAudioPlaying(false);
     };
 
-    // Helper: Play Linear16 PCM 24kHz
-    const playAudioChunk = (arrayBuffer: ArrayBuffer) => {
-        if (!audioContextRef.current) return;
-
-        const int16Array = new Int16Array(arrayBuffer);
-        const float32Array = new Float32Array(int16Array.length);
-
-        for (let i = 0; i < int16Array.length; i++) {
-            float32Array[i] = int16Array[i] / 32768.0;
-        }
-
-        const buffer = audioContextRef.current.createBuffer(1, float32Array.length, 24000);
-        buffer.getChannelData(0).set(float32Array);
-
-        const source = audioContextRef.current.createBufferSource();
-        source.buffer = buffer;
-        source.connect(audioContextRef.current.destination);
-
-        if (nextStartTimeRef.current < audioContextRef.current.currentTime) {
-            nextStartTimeRef.current = audioContextRef.current.currentTime;
-        }
-        source.start(nextStartTimeRef.current);
-        nextStartTimeRef.current += buffer.duration;
+    const getStatusText = () => {
+        if (!isMicActive) return 'Start Agent';
+        if (isSpeaking) return 'AI Speaking...';
+        if (isConnected) return 'Listening...';
+        return 'Connecting...';
     };
 
-    // Timer to reset "Audio Playing" visualizer if silence
-    const silenceTimerRef = useRef<any>(null);
-    const resetSilenceTimer = () => {
-        if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
-        silenceTimerRef.current = setTimeout(() => setAudioPlaying(false), 1000); // 1s tolerance
-    };
-
-
-    // --- Old Text Submission (Backwards Compatible) ---
-    const processAIResponse = async (input: string, currentCode: string) => {
-        setAudioPlaying(true);
-        // Fallback to old backend LLM for manual text submission
-        try {
-            const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-            const res = await fetch(`${API_URL}/api/ai/chat`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ message: input, context: 'technical-interview', code: currentCode })
-            });
-            const data = await res.json();
-            addMessage('assistant', data.response);
-
-            // TTS via Deepgram Aura REST (if key avail)
-            if (deepgramKey) playDeepgramTTS(data.response);
-        } catch (e) {
-            setTerminalOutput({ type: 'error', message: 'Failed to get review.' });
-            setAudioPlaying(false);
-        }
-    };
-
-    const playDeepgramTTS = async (text: string) => {
-        try {
-            const res = await fetch(`https://api.deepgram.com/v1/speak?model=aura-asteria-en`, {
-                method: 'POST',
-                headers: { 'Authorization': `Token ${deepgramKey}`, 'Content-Type': 'application/json' },
-                body: JSON.stringify({ text })
-            });
-            const blob = await res.blob();
-            const audio = new Audio(URL.createObjectURL(blob));
-            audio.onended = () => setAudioPlaying(false);
-            setAudioPlaying(true);
-            await audio.play();
-        } catch (e) { }
-    };
-
-    const handleSubmitCode = async () => {
-        setEditorFrozen(true);
-        setTerminalOutput({ type: 'info', message: 'Submitting to AI Reviewer...' });
-        try {
-            await processAIResponse("I have submitted my solution. Please review it.", code);
-            setTerminalOutput({ type: 'success', message: 'Review received from AI.' });
-        } catch (e) {
-            setTerminalOutput({ type: 'error', message: 'Error submitting.' });
-        } finally {
-            setEditorFrozen(false);
-        }
+    const getStatusIcon = () => {
+        if (isSpeaking) return <Loader2 size={16} className="animate-spin" />;
+        if (isMicActive) return <MicOff size={16} />;
+        return <Mic size={16} />;
     };
 
     return (
@@ -283,31 +295,19 @@ const Controls: React.FC = () => {
             <button
                 onClick={() => setMicActive(!isMicActive)}
                 className={`flex items-center gap-3 px-6 py-3 rounded-full font-bold text-xs transition-all ${isMicActive
-                        ? 'bg-red-500 text-white animate-pulse shadow-[0_0_20px_rgba(239,68,68,0.4)]'
-                        : 'bg-white/10 hover:bg-white/20 text-white'
+                    ? 'bg-red-500 text-white animate-pulse shadow-[0_0_20px_rgba(239,68,68,0.4)]'
+                    : 'bg-white/10 hover:bg-white/20 text-white'
                     }`}
-                disabled={!deepgramKey}
             >
-                {connectionState === 'connecting' ? (
-                    <Loader2 size={16} className="animate-spin" />
-                ) : isMicActive ? (
-                    <MicOff size={16} />
-                ) : (
-                    <Mic size={16} />
-                )}
-                <span className="tracking-wide">
-                    {connectionState === 'connecting' ? 'Connecting...' : isMicActive ? 'Agent Active' : 'Start Agent'}
-                </span>
+                {getStatusIcon()}
+                <span className="tracking-wide">{getStatusText()}</span>
             </button>
-
             <div className="h-8 w-[1px] bg-white/10 mx-2"></div>
-
             <button
-                onClick={handleSubmitCode}
+                onClick={() => setTerminalOutput({ type: 'info', message: 'Solution submitted.' })}
                 className="flex items-center gap-2 px-6 py-3 rounded-full bg-white text-black font-bold text-xs hover:scale-105 active:scale-95 transition-all shadow-lg hover:shadow-white/20"
             >
-                <Play size={16} fill="currentColor" />
-                Submit Solution
+                <Play size={16} fill="currentColor" /> Submit Solution
             </button>
         </div>
     );

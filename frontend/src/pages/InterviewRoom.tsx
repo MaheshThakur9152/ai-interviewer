@@ -72,7 +72,7 @@ const InterviewRoom: React.FC<InterviewRoomProps> = ({ onExit, onSignOut, user }
                     if (videoRef.current) videoRef.current.srcObject = stream;
                 })
                 .catch(err => {
-                    console.error("Camera permission denied:", err);
+                    // Suppress error if camera not found, just set visual state to off
                     setIsCameraOn(false);
                 });
         } else if (!isCameraOn && videoRef.current?.srcObject) {
