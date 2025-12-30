@@ -56,6 +56,15 @@ const transporter = nodemailer.createTransport({
   },
 });
 
+// Test transporter
+transporter.verify((error, success) => {
+  if (error) {
+    console.error('Transporter verification failed:', error);
+  } else {
+    console.log('Transporter is ready to send emails');
+  }
+});
+
 // Initialize Google AI
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
