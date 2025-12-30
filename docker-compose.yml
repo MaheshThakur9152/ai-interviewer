@@ -10,7 +10,8 @@ services:
 
   nginx:
     build:
-      context: ./nginx
+      context: .
+      dockerfile: ./nginx/Dockerfile
       args:
         VITE_API_URL: http://api.cosinv.com
     ports:
