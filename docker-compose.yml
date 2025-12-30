@@ -13,9 +13,10 @@ services:
       context: .
       dockerfile: ./nginx/Dockerfile
       args:
-        VITE_API_URL: http://api.cosinv.com
+        VITE_API_URL: https://api.cosinv.com
     ports:
       - "80:80"
+      - "443:443"
     volumes:
       - ./ssl:/etc/ssl/certs
       - ./webroot:/var/www/html
