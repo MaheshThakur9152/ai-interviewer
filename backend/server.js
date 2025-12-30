@@ -119,11 +119,12 @@ app.post('/api/auth/login', async (req, res) => {
             </div>`
     };
 
-    // await transporter.sendMail(mailOptions);
+    await transporter.sendMail(mailOptions);
     console.log(`OTP sent to ${email}`);
     res.json({ message: 'OTP sent successfully' });
   } catch (error) {
-    console.error('Error in login:', error);
+    console.error('Error in login:', error.message);
+    console.error('Error details:', error);
     res.status(500).json({ error: 'Failed to process login' });
   }
 });
