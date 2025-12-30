@@ -128,7 +128,7 @@ app.post('/api/auth/login', async (req, res) => {
             </div>`
     };
 
-    await transporter.sendMail(mailOptions);
+    // await transporter.sendMail(mailOptions);
     console.log(`OTP sent to ${email}`);
     res.json({ message: 'OTP sent successfully' });
   } catch (error) {
